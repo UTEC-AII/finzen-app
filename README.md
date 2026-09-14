@@ -120,7 +120,7 @@ Crea un `.env` a partir de `.env.example`:
 ## Despliegue en AWS (EC2)
 
 > **Arquitectura:** **una sola instancia EC2** con **IP elástica** (sin Application
-> Load Balancer ni Auto Scaling), dimensionada para ~10 usuarios. Nginx reparte
+> Load Balancer ni Auto Scaling), dimensionada para el volumen del proyecto. Nginx reparte
 > internamente a los contenedores.
 >
 > **Orden:** levanta primero este backend; el frontend se conecta a su red.
@@ -283,7 +283,7 @@ salvo el registro y el login.
 
 ## Problemas conocidos
 
-- **SQLite**: ideal para ~10 usuarios. Un solo escritor por archivo; si el proyecto
+- **SQLite**: adecuada para esta escala. Un solo escritor por archivo; si el proyecto
   crece a muchos usuarios concurrentes, migrar a **PostgreSQL/RDS**.
 - **Escalado**: se despliega en **una sola instancia EC2** (con IP elástica). Si se
   quisiera escalar horizontalmente (varias instancias), SQLite no bastaría —cada
