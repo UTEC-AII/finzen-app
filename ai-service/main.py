@@ -22,6 +22,7 @@ from ai_client import (
     embed_many_with_model,
     embed_text,
     embed_with_model,
+    extract_filters,
     generate_answer,
     is_openai_enabled,
 )
@@ -348,14 +349,40 @@ def query(
     # Clave efectiva: encabezado (si viene) o la guardada en SQLite.
     api_key = x_openai_key or stored_openai_key(db)
 
+    # Pre-filtrado por metadata (categoría, tipo y rango de fechas) antes de buscar.
+    categories = sorted({record.category for record in records if record.category})
+    record_types = sorted({record.record_type for record in records if record.record_type})
+    filters = extract_filters(payload.question, categories, record_types, api_key=api_key)
+
+    candidates = records
+    if filters.get("category"):
+        candidates = [r for r in candidates if r.category == filters["category"]]
+    if filters.get("record_type"):
+        candidates = [r for r in candidates if r.record_type == filters["record_type"]]
+    if filters.get("start_date"):
+        candidates = [r for r in candidates if r.date and r.date >= filters["start_date"]]
+    if filters.get("end_date"):
+        candidates = [r for r in candidates if r.date and r.date <= filters["end_date"]]
+    # Si el filtro deja todo vacío, se usan todos los movimientos (evita respuestas vacías).
+    if not candidates:
+        candidates = records
+
+    candidate_ids = {record.id for record in candidates}
+
     # Búsqueda híbrida: vectorial (semántica) + palabras clave (FTS5), fusionadas con RRF.
     question_vector = embed_text(payload.question, api_key=api_key)
-    vector_ids = vector_search(records, question_vector, CANDIDATES)
-    keyword_ids = keyword_search(db, payload.user_id, payload.question, CANDIDATES)
+    vector_ids = vector_search(candidates, question_vector, CANDIDATES)
+    keyword_ids = [
+        doc_id
+        for doc_id in keyword_search(db, payload.user_id, payload.question, CANDIDATES)
+        if doc_id in candidate_ids
+    ]
     fused_ids = reciprocal_rank_fusion(vector_ids, keyword_ids)
 
     by_id = {record.id: record for record in records}
     top_records = [by_id[doc_id] for doc_id in fused_ids[:TOP_K] if doc_id in by_id]
+    if not top_records:
+        top_records = candidates[:TOP_K]
 
     # Genera la respuesta final a partir de los movimientos más relevantes.
     answer = generate_answer(payload.question, top_records, api_key=api_key)

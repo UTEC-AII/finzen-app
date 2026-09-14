@@ -2,7 +2,9 @@
 # La clave de OpenAI puede venir de la variable de entorno, de la base SQLite
 # (tabla settings) o del encabezado X-OpenAI-Key que envía el BFF de Next.js.
 import hashlib
+import json
 import os
+from datetime import date, timedelta
 from decimal import Decimal
 
 import numpy as np
@@ -80,6 +82,70 @@ def embed_many_with_model(
 ) -> tuple[list[list[float]], str]:
     # Vectoriza varios textos (lote) y devuelve el modelo usado.
     return _embed_batch(texts, api_key)
+
+
+def _heuristic_filters(
+    question: str, categories: list[str], record_types: list[str]
+) -> dict:
+    # Modo local (sin OpenAI): detecta filtros por palabras clave en la pregunta.
+    q = question.lower()
+    filters: dict = {}
+
+    for category in categories:
+        if category.lower() in q:
+            filters["category"] = category
+            break
+
+    if any(word in q for word in ["ingreso", "sueldo", "recibí", "recibi", "gané", "gane"]):
+        filters["record_type"] = "income"
+    elif any(word in q for word in ["gasto", "gasté", "gaste", "pagué", "pague"]):
+        filters["record_type"] = "expense"
+
+    today = date.today()
+    if "este mes" in q or "mes actual" in q:
+        filters["start_date"] = today.replace(day=1).isoformat()
+        filters["end_date"] = today.isoformat()
+    elif "mes pasado" in q or "mes anterior" in q:
+        first_this_month = today.replace(day=1)
+        last_prev_month = first_this_month - timedelta(days=1)
+        filters["start_date"] = last_prev_month.replace(day=1).isoformat()
+        filters["end_date"] = last_prev_month.isoformat()
+    elif "este año" in q or "este ano" in q:
+        filters["start_date"] = date(today.year, 1, 1).isoformat()
+        filters["end_date"] = today.isoformat()
+
+    return filters
+
+
+def extract_filters(
+    question: str,
+    categories: list[str],
+    record_types: list[str],
+    api_key: str | None = None,
+) -> dict:
+    # Extrae filtros estructurados (categoría, tipo, fechas) de la pregunta.
+    client = _client_for(api_key)
+    if client is not None:
+        try:
+            system_prompt = (
+                "Extrae filtros de una pregunta financiera. Devuelve SOLO un JSON con las "
+                "claves: category (una de la lista o null), record_type ('income', 'expense' "
+                "o null), start_date (YYYY-MM-DD o null) y end_date (YYYY-MM-DD o null). "
+                f"Categorías posibles: {', '.join(categories) or 'ninguna'}. "
+                f"Hoy es {date.today().isoformat()}."
+            )
+            response = client.chat.completions.create(
+                model=CHAT_MODEL,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": question},
+                ],
+                response_format={"type": "json_object"},
+            )
+            return json.loads(response.choices[0].message.content)
+        except Exception:
+            pass
+    return _heuristic_filters(question, categories, record_types)
 
 
 def generate_answer(question: str, records: list, api_key: str | None = None) -> str:
