@@ -20,6 +20,8 @@ class VectorizedTransaction(Base):
     # Tipo de registro: "income" (ingreso) o "expense" (gasto).
     record_type = Column(String, nullable=False)
     category = Column(String, default="")
+    # Moneda del movimiento (PEN, USD, ...).
+    currency = Column(String, default="")
     # Monto monetario con precisión fija (nunca Float para dinero).
     amount = Column(Numeric(12, 2), default=0)
     date = Column(String, default="")

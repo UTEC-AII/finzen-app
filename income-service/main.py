@@ -87,6 +87,7 @@ def create_income(
             "user_id": income.user_id,
             "record_type": "income",
             "category": income.type,
+            "currency": income.currency,
             "amount": str(income.amount),
             "date": income.date.isoformat(),
             "description": income.description,

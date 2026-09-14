@@ -10,12 +10,14 @@ class UserCreate(BaseModel):
     email: EmailStr
     password: str = Field(..., min_length=6)
     preferred_currency: str = "PEN"
+    timezone: str = "America/Lima"
 
 
 class UserUpdate(BaseModel):
     # El correo no se puede editar porque es el identificador único de la cuenta.
     name: Optional[str] = Field(None, min_length=1)
     preferred_currency: Optional[str] = None
+    timezone: Optional[str] = None
     monthly_savings_goal: Optional[Decimal] = Field(
         None, ge=0, max_digits=12, decimal_places=2
     )
@@ -34,6 +36,7 @@ class UserOut(BaseModel):
     name: str
     email: str
     preferred_currency: str
+    timezone: str
     monthly_savings_goal: Decimal
     created_at: str
 

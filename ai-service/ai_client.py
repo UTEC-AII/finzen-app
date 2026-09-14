@@ -5,8 +5,9 @@ import calendar
 import hashlib
 import json
 import os
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from decimal import Decimal
+from zoneinfo import ZoneInfo
 
 import numpy as np
 from openai import OpenAI
@@ -85,8 +86,21 @@ def embed_many_with_model(
     return _embed_batch(texts, api_key)
 
 
+def _today(timezone: str | None = None) -> date:
+    # Fecha "hoy" en la zona horaria del usuario (si es válida); si no, la del servidor.
+    if timezone:
+        try:
+            return datetime.now(ZoneInfo(timezone)).date()
+        except Exception:
+            pass
+    return date.today()
+
+
 def _heuristic_filters(
-    question: str, categories: list[str], record_types: list[str]
+    question: str,
+    categories: list[str],
+    record_types: list[str],
+    timezone: str | None = None,
 ) -> dict:
     # Modo local (sin OpenAI): detecta filtros por palabras clave en la pregunta.
     q = question.lower()
@@ -102,7 +116,7 @@ def _heuristic_filters(
     elif any(word in q for word in ["gasto", "gasté", "gaste", "pagué", "pague"]):
         filters["record_type"] = "expense"
 
-    today = date.today()
+    today = _today(timezone)
     if "este mes" in q or "mes actual" in q:
         filters["start_date"] = today.replace(day=1).isoformat()
         filters["end_date"] = today.isoformat()
@@ -141,11 +155,12 @@ def extract_filters(
     categories: list[str],
     record_types: list[str],
     api_key: str | None = None,
+    timezone: str | None = None,
 ) -> dict:
     # Extrae filtros estructurados (categoría, tipo, fechas) de la pregunta.
     # La heurística detecta de forma determinista "este mes", categorías, etc.;
     # el LLM (si hay clave) rellena lo que la heurística no haya encontrado.
-    filters = _heuristic_filters(question, categories, record_types)
+    filters = _heuristic_filters(question, categories, record_types, timezone)
 
     client = _client_for(api_key)
     if client is not None:
@@ -155,7 +170,7 @@ def extract_filters(
                 "claves: category (una de la lista o null), record_type ('income', 'expense' "
                 "o null), start_date (YYYY-MM-DD o null) y end_date (YYYY-MM-DD o null). "
                 f"Categorías posibles: {', '.join(categories) or 'ninguna'}. "
-                f"Hoy es {date.today().isoformat()}."
+                f"Hoy es {_today(timezone).isoformat()}."
             )
             response = client.chat.completions.create(
                 model=CHAT_MODEL,
@@ -199,7 +214,8 @@ def generate_answer(question: str, records: list, api_key: str | None = None) ->
                 "Responde en español, de forma breve y directa, usando la información del CONTEXTO. "
                 "El CONTEXTO ya contiene los movimientos del usuario relevantes para la pregunta: "
                 "úsalos y respóndela con seguridad. Si el usuario pide un total, suma los movimientos "
-                "relevantes y muestra el resultado con su moneda. "
+                "relevantes y muestra el resultado con su moneda. NUNCA sumes montos de monedas "
+                "distintas entre sí: si hay varias monedas, repórtalas por separado. "
                 "Solo si el CONTEXTO no tiene ningún movimiento, responde exactamente: "
                 f'"{NO_INFO_ANSWER}" '
                 "No inventes montos, fechas, categorías ni comercios."
@@ -219,25 +235,25 @@ def generate_answer(question: str, records: list, api_key: str | None = None) ->
     return _build_local_answer(records)
 
 
+def _summarize_by_currency(records: list) -> str:
+    # Suma montos agrupados por moneda (nunca mezcla monedas distintas).
+    totals: dict[str, Decimal] = {}
+    for record in records:
+        currency = record.currency or ""
+        totals[currency] = totals.get(currency, Decimal("0")) + record.amount
+    return ", ".join(f"{amount:.2f} {currency}".strip() for currency, amount in totals.items())
+
+
 def _build_local_answer(records: list) -> str:
-    # Resume los movimientos recuperados: mayor categoría de gasto y total de ingresos.
+    # Resume los movimientos recuperados, separando por moneda.
     expenses = [record for record in records if record.record_type == "expense"]
     incomes = [record for record in records if record.record_type == "income"]
 
     parts = []
     if expenses:
-        # Se suman montos como Decimal para no perder precisión financiera.
-        totals: dict[str, Decimal] = {}
-        for record in expenses:
-            totals[record.category] = totals.get(record.category, Decimal("0")) + record.amount
-        top_category = max(totals, key=totals.get)
-        parts.append(
-            f"Según tus movimientos más relacionados, tu mayor gasto está en "
-            f"{top_category} con {totals[top_category]:.2f}."
-        )
+        parts.append(f"En los movimientos recuperados, tus gastos suman: {_summarize_by_currency(expenses)}.")
     if incomes:
-        total_income = sum((record.amount for record in incomes), Decimal("0"))
-        parts.append(f"También se consideran ingresos por un total de {total_income:.2f}.")
+        parts.append(f"Tus ingresos suman: {_summarize_by_currency(incomes)}.")
     if not parts:
         return NO_INFO_ANSWER
 

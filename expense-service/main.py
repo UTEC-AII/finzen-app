@@ -109,6 +109,7 @@ def create_expense(
             "user_id": expense.user_id,
             "record_type": "expense",
             "category": expense.category,
+            "currency": expense.currency,
             "amount": str(expense.amount),
             "date": expense.date.isoformat(),
             "description": expense.description,

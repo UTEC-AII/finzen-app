@@ -70,6 +70,10 @@ def ensure_schema():
                 "ALTER TABLE vectorized_transactions "
                 "ADD COLUMN embedding_model VARCHAR DEFAULT ''"
             )
+        if columns and "currency" not in columns:
+            conn.exec_driver_sql(
+                "ALTER TABLE vectorized_transactions ADD COLUMN currency VARCHAR DEFAULT ''"
+            )
         conn.exec_driver_sql(
             f"CREATE VIRTUAL TABLE IF NOT EXISTS {FTS_TABLE} "
             "USING fts5(id UNINDEXED, user_id UNINDEXED, text, category, description)"
@@ -110,7 +114,8 @@ def stored_openai_key(db: Session) -> str | None:
 def build_record_text(payload: schemas.VectorizeRequest) -> str:
     # Construye la frase que se vectoriza a partir del movimiento.
     label = "Ingreso" if payload.record_type == "income" else "Gasto"
-    parts = [f"{label} de {payload.amount:.2f}"]
+    amount_text = f"{payload.amount:.2f} {payload.currency}".strip()
+    parts = [f"{label} de {amount_text}"]
     if payload.category:
         parts.append(f"en {payload.category}")
     if payload.date:
@@ -263,6 +268,7 @@ def vectorize(
         existing.embedding_model = model_name
         existing.amount = payload.amount
         existing.category = payload.category
+        existing.currency = payload.currency
         existing.date = payload.date
         existing.description = payload.description
         db.commit()
@@ -276,6 +282,7 @@ def vectorize(
         user_id=payload.user_id,
         record_type=payload.record_type,
         category=payload.category,
+        currency=payload.currency,
         amount=payload.amount,
         date=payload.date,
         description=payload.description,
@@ -367,7 +374,9 @@ def query(
     # Pre-filtrado por metadata (categoría, tipo y rango de fechas) antes de buscar.
     categories = sorted({record.category for record in records if record.category})
     record_types = sorted({record.record_type for record in records if record.record_type})
-    filters = extract_filters(payload.question, categories, record_types, api_key=api_key)
+    filters = extract_filters(
+        payload.question, categories, record_types, api_key=api_key, timezone=payload.timezone
+    )
 
     candidates = records
     if filters.get("category"):

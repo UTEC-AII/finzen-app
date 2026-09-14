@@ -18,6 +18,22 @@ from security import create_access_token, get_current_user_id, hash_password, ve
 # Crea las tablas al iniciar el servicio.
 Base.metadata.create_all(bind=engine)
 
+
+def ensure_schema():
+    # Migración ligera: agrega columnas nuevas a bases ya existentes.
+    with engine.begin() as conn:
+        columns = [
+            row[1]
+            for row in conn.exec_driver_sql("PRAGMA table_info(users)").fetchall()
+        ]
+        if columns and "timezone" not in columns:
+            conn.exec_driver_sql(
+                "ALTER TABLE users ADD COLUMN timezone VARCHAR DEFAULT 'America/Lima'"
+            )
+
+
+ensure_schema()
+
 app = FastAPI(title="FinZen - User Service", version="1.0.0")
 
 # Orígenes permitidos leídos desde variables de entorno (nunca "*" con credenciales).
@@ -66,6 +82,7 @@ def create_user(payload: schemas.UserCreate, db: Session = Depends(get_db)):
         email=payload.email,
         password_hash=hash_password(payload.password),
         preferred_currency=payload.preferred_currency,
+        timezone=payload.timezone,
         monthly_savings_goal=0,
         created_at=datetime.now(timezone.utc).isoformat(),
     )
