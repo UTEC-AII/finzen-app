@@ -25,9 +25,21 @@ class QueryRequest(BaseModel):
     question: str = Field(..., min_length=1)
 
 
+class SourceItem(BaseModel):
+    # Movimiento en el que se basó la respuesta (para citas/atribución).
+    id: str
+    text: str
+
+
 class QueryResponse(BaseModel):
     answer: str
     matched_records: int
+    sources: list[SourceItem] = []
+
+
+class ReindexResponse(BaseModel):
+    reindexed: int
+    model: str
 
 
 class OpenAIKeyInput(BaseModel):

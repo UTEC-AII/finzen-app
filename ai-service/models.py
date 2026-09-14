@@ -28,6 +28,8 @@ class VectorizedTransaction(Base):
     text = Column(String, nullable=False)
     # Vector guardado como texto JSON dentro de SQLite.
     embedding = Column(Text, nullable=False)
+    # Modelo con el que se generó el embedding (para detectar re-indexación).
+    embedding_model = Column(String, default="")
     created_at = Column(String, nullable=False)
 
     __table_args__ = (Index("idx_vectors_user_type", "user_id", "record_type"),)

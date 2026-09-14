@@ -1,6 +1,7 @@
 # Microservicio de IA: vectoriza movimientos y responde consultas en lenguaje natural (HU7).
 import json
 import os
+import re
 import uuid
 from datetime import datetime, timezone
 
@@ -10,11 +11,20 @@ from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 import models
 import schemas
-from ai_client import embed_text, generate_answer, is_openai_enabled
+from ai_client import (
+    NO_INFO_ANSWER,
+    current_model_name,
+    embed_many_with_model,
+    embed_text,
+    embed_with_model,
+    generate_answer,
+    is_openai_enabled,
+)
 from database import Base, engine, get_db
 from security import get_current_user_id
 
@@ -38,9 +48,48 @@ app.add_middleware(
 
 # Cantidad de movimientos más relevantes que se recuperan por cada consulta.
 TOP_K = 5
-
+# Cuántos candidatos recupera cada buscador (vectorial y palabras clave) antes de fusionar.
+CANDIDATES = 20
 # Clave usada en la tabla de configuración para guardar la clave de OpenAI.
 OPENAI_KEY_SETTING = "openai_api_key"
+# Tabla FTS5 para la búsqueda por palabras clave (modo híbrido).
+FTS_TABLE = "vectorized_transactions_fts"
+
+
+def ensure_schema():
+    # Migración ligera: agrega columnas nuevas a bases ya existentes y crea la tabla FTS5.
+    with engine.begin() as conn:
+        columns = [
+            row[1]
+            for row in conn.exec_driver_sql(
+                "PRAGMA table_info(vectorized_transactions)"
+            ).fetchall()
+        ]
+        if columns and "embedding_model" not in columns:
+            conn.exec_driver_sql(
+                "ALTER TABLE vectorized_transactions "
+                "ADD COLUMN embedding_model VARCHAR DEFAULT ''"
+            )
+        conn.exec_driver_sql(
+            f"CREATE VIRTUAL TABLE IF NOT EXISTS {FTS_TABLE} "
+            "USING fts5(id UNINDEXED, user_id UNINDEXED, text, category, description)"
+        )
+
+
+ensure_schema()
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    # Devuelve un formato de error uniforme para toda la API.
+    return JSONResponse(
+        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        content={
+            "error": "Error de validación de datos",
+            "code": "VALIDATION_ERROR",
+            "details": jsonable_encoder(exc.errors()),
+        },
+    )
 
 
 def mask_key(value: str | None) -> str | None:
@@ -56,19 +105,6 @@ def stored_openai_key(db: Session) -> str | None:
     # Lee la clave guardada en SQLite (tabla settings).
     setting = db.get(models.Setting, OPENAI_KEY_SETTING)
     return setting.value if setting else None
-
-
-@app.exception_handler(RequestValidationError)
-async def validation_exception_handler(request: Request, exc: RequestValidationError):
-    # Devuelve un formato de error uniforme para toda la API.
-    return JSONResponse(
-        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-        content={
-            "error": "Error de validación de datos",
-            "code": "VALIDATION_ERROR",
-            "details": jsonable_encoder(exc.errors()),
-        },
-    )
 
 
 def build_record_text(payload: schemas.VectorizeRequest) -> str:
@@ -92,6 +128,63 @@ def cosine_similarity(vector_a: list[float], vector_b: list[float]) -> float:
     if denominator == 0:
         return 0.0
     return float(np.dot(array_a, array_b) / denominator)
+
+
+def upsert_fts(db: Session, record: models.VectorizedTransaction) -> None:
+    # Mantiene la tabla FTS sincronizada con el registro vectorizado.
+    db.execute(text(f"DELETE FROM {FTS_TABLE} WHERE id = :id"), {"id": record.id})
+    db.execute(
+        text(
+            f"INSERT INTO {FTS_TABLE} (id, user_id, text, category, description) "
+            "VALUES (:id, :user_id, :text, :category, :description)"
+        ),
+        {
+            "id": record.id,
+            "user_id": record.user_id,
+            "text": record.text,
+            "category": record.category,
+            "description": record.description,
+        },
+    )
+
+
+def vector_search(records: list, question_vector: list[float], limit: int) -> list[str]:
+    # Ranking por similitud coseno (búsqueda semántica).
+    scored = sorted(
+        records,
+        key=lambda record: cosine_similarity(question_vector, json.loads(record.embedding)),
+        reverse=True,
+    )
+    return [record.id for record in scored[:limit]]
+
+
+def keyword_search(db: Session, user_id: str, question: str, limit: int) -> list[str]:
+    # Ranking por palabras clave usando FTS5 (búsqueda léxica).
+    tokens = re.findall(r"\w+", question.lower())
+    if not tokens:
+        return []
+    match_query = " OR ".join(f'"{token}"' for token in tokens)
+    try:
+        rows = db.execute(
+            text(
+                f"SELECT id FROM {FTS_TABLE} "
+                f"WHERE {FTS_TABLE} MATCH :query AND user_id = :user_id LIMIT :limit"
+            ),
+            {"query": match_query, "user_id": user_id, "limit": limit},
+        ).fetchall()
+        return [row[0] for row in rows]
+    except Exception:
+        # Si la consulta FTS falla, se continúa solo con la búsqueda vectorial.
+        return []
+
+
+def reciprocal_rank_fusion(*rankings: list[str], k: int = 60) -> list[str]:
+    # Combina varios rankings en uno (Reciprocal Rank Fusion).
+    scores: dict[str, float] = {}
+    for ranking in rankings:
+        for rank, doc_id in enumerate(ranking):
+            scores[doc_id] = scores.get(doc_id, 0.0) + 1.0 / (k + rank + 1)
+    return [doc_id for doc_id, _ in sorted(scores.items(), key=lambda item: item[1], reverse=True)]
 
 
 @app.get("/health")
@@ -154,8 +247,10 @@ def vectorize(
 ):
     # Endpoint interno: lo llaman income-service y expense-service al crear un movimiento.
     # La clave se toma del encabezado (si viene) o de la guardada en SQLite.
-    text = build_record_text(payload)
-    embedding = embed_text(text, api_key=x_openai_key or stored_openai_key(db))
+    api_key = x_openai_key or stored_openai_key(db)
+    text_value = build_record_text(payload)
+    # Se guarda el modelo realmente usado (OpenAI o local).
+    embedding, model_name = embed_with_model(text_value, api_key=api_key)
 
     existing = (
         db.query(models.VectorizedTransaction)
@@ -163,12 +258,16 @@ def vectorize(
         .first()
     )
     if existing:
-        existing.text = text
+        existing.text = text_value
         existing.embedding = json.dumps(embedding)
+        existing.embedding_model = model_name
         existing.amount = payload.amount
         existing.category = payload.category
         existing.date = payload.date
         existing.description = payload.description
+        db.commit()
+        db.refresh(existing)
+        upsert_fts(db, existing)
         db.commit()
         return schemas.VectorizeResponse(status="updated", id=payload.id)
 
@@ -180,13 +279,50 @@ def vectorize(
         amount=payload.amount,
         date=payload.date,
         description=payload.description,
-        text=text,
+        text=text_value,
         embedding=json.dumps(embedding),
+        embedding_model=model_name,
         created_at=datetime.now(timezone.utc).isoformat(),
     )
     db.add(record)
     db.commit()
+    db.refresh(record)
+    upsert_fts(db, record)
+    db.commit()
     return schemas.VectorizeResponse(status="vectorized", id=record.id)
+
+
+@app.post("/reindex", response_model=schemas.ReindexResponse)
+def reindex(
+    current_user_id: str = Depends(get_current_user_id),
+    db: Session = Depends(get_db),
+    x_openai_key: str | None = Header(default=None, alias="X-OpenAI-Key"),
+):
+    # Re-indexa (regenera los vectores de) todos los movimientos del usuario
+    # con el modelo actual. Se usa al activar la clave real de OpenAI.
+    api_key = x_openai_key or stored_openai_key(db)
+
+    records = (
+        db.query(models.VectorizedTransaction)
+        .filter(models.VectorizedTransaction.user_id == current_user_id)
+        .all()
+    )
+    if not records:
+        return schemas.ReindexResponse(reindexed=0, model=current_model_name(api_key))
+
+    vectors, model_used = embed_many_with_model(
+        [record.text for record in records], api_key=api_key
+    )
+    for record, vector in zip(records, vectors):
+        record.embedding = json.dumps(vector)
+        record.embedding_model = model_used
+    db.commit()
+    # Sincroniza la tabla FTS con todos los movimientos (útil para registros antiguos).
+    for record in records:
+        upsert_fts(db, record)
+    db.commit()
+
+    return schemas.ReindexResponse(reindexed=len(records), model=model_used)
 
 
 @app.post("/query", response_model=schemas.QueryResponse)
@@ -207,23 +343,30 @@ def query(
         .all()
     )
     if not records:
-        return schemas.QueryResponse(
-            answer="Todavía no tienes ingresos ni gastos registrados para analizar.",
-            matched_records=0,
-        )
+        return schemas.QueryResponse(answer=NO_INFO_ANSWER, matched_records=0, sources=[])
 
     # Clave efectiva: encabezado (si viene) o la guardada en SQLite.
     api_key = x_openai_key or stored_openai_key(db)
 
-    # Vectoriza la pregunta y calcula la similitud coseno con cada movimiento.
+    # Búsqueda híbrida: vectorial (semántica) + palabras clave (FTS5), fusionadas con RRF.
     question_vector = embed_text(payload.question, api_key=api_key)
-    scored = sorted(
-        records,
-        key=lambda record: cosine_similarity(question_vector, json.loads(record.embedding)),
-        reverse=True,
-    )
-    top_records = scored[:TOP_K]
+    vector_ids = vector_search(records, question_vector, CANDIDATES)
+    keyword_ids = keyword_search(db, payload.user_id, payload.question, CANDIDATES)
+    fused_ids = reciprocal_rank_fusion(vector_ids, keyword_ids)
+
+    by_id = {record.id: record for record in records}
+    top_records = [by_id[doc_id] for doc_id in fused_ids[:TOP_K] if doc_id in by_id]
 
     # Genera la respuesta final a partir de los movimientos más relevantes.
     answer = generate_answer(payload.question, top_records, api_key=api_key)
-    return schemas.QueryResponse(answer=answer, matched_records=len(top_records))
+
+    # Citas: se extraen los [ID: x] que el modelo usó; si no citó, se devuelven los recuperados.
+    cited_ids = set(re.findall(r"\[ID:\s*([^\]]+)\]", answer))
+    used_records = [record for record in top_records if record.id in cited_ids] or top_records
+    sources = [schemas.SourceItem(id=record.id, text=record.text) for record in used_records]
+
+    return schemas.QueryResponse(
+        answer=answer,
+        matched_records=len(top_records),
+        sources=sources,
+    )
