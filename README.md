@@ -173,6 +173,41 @@ Crea un `.env` a partir de `.env.example`:
 > **Docker**, cualquier Ubuntu sirve. `cloud.22` solo ahorra el paso de instalar
 > Docker/Python/Node. Si no la encuentras, usa Ubuntu 24.04 LTS y el paso 4.
 
+### Alternativa: Ubuntu desde cero (sin la AMI `cloud.22`)
+
+Si `cloud.22` no aparece en tu consola, crea la instancia con una AMI pública de
+Ubuntu y prepara el entorno tú mismo:
+
+1. **AMI:** busca **"Ubuntu Server 24.04 LTS (HVM), SSD Volume Type"**,
+   arquitectura `64-bit (x86)`.
+2. Tipo `t3.micro`, **sin key pair**, con **IP elástica** (igual que arriba).
+3. Conéctate con **EC2 Instance Connect** (paso 3).
+4. **Instala Docker desde cero:**
+
+   ```bash
+   sudo apt update
+   sudo apt install -y ca-certificates curl git
+
+   # Repositorio oficial de Docker
+   sudo install -m 0755 -d /etc/apt/keyrings
+   sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+   sudo chmod a+r /etc/apt/keyrings/docker.asc
+   echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo $VERSION_CODENAME) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+   sudo apt update
+   sudo apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+
+   # Permite usar Docker sin sudo
+   sudo usermod -aG docker $USER && newgrp docker
+
+   # Verifica
+   docker --version && docker compose version
+   ```
+
+   > Atajo (paquete de Ubuntu, puede ser una versión más antigua de Docker):
+   > `sudo apt install -y docker.io docker-compose-v2`.
+
+5. Continúa con el **paso 4 (clonar)** y el **paso 5 (levantar los contenedores)**.
+
 > **Importante (Mac Apple Silicon):** las imágenes construidas en un Mac son ARM.
 > Para EC2 (x86) construye con `docker buildx build --platform linux/amd64` **o**,
 > más simple, construye directamente dentro de la instancia (paso 5, que ya hace
