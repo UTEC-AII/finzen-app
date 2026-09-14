@@ -14,7 +14,7 @@ from sqlalchemy.orm import Session
 import models
 import schemas
 from database import Base, engine, get_db
-from integrations import vectorize_record
+from integrations import delete_vector, vectorize_record
 from security import get_current_user_id
 
 # Crea las tablas al iniciar el servicio.
@@ -154,3 +154,22 @@ def get_expense(
     if expense.user_id != current_user_id:
         raise HTTPException(status_code=403, detail="No autorizado para este gasto")
     return expense
+
+
+@app.delete("/expenses/{expense_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_expense(
+    expense_id: str,
+    current_user_id: str = Depends(get_current_user_id),
+    db: Session = Depends(get_db),
+):
+    # Elimina el gasto solo si pertenece al usuario autenticado.
+    expense = db.query(models.Expense).filter(models.Expense.id == expense_id).first()
+    if not expense:
+        raise HTTPException(status_code=404, detail="Gasto no encontrado")
+    if expense.user_id != current_user_id:
+        raise HTTPException(status_code=403, detail="No autorizado para este gasto")
+    db.delete(expense)
+    db.commit()
+    # Elimina también su vector en el ai-service.
+    delete_vector(expense_id)
+    return None

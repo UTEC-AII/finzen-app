@@ -13,3 +13,11 @@ def vectorize_record(record: dict) -> None:
     except Exception:
         # El registro ya quedó guardado; solo queda temporalmente fuera de las consultas de IA.
         pass
+
+
+def delete_vector(record_id: str) -> None:
+    # Elimina el vector del movimiento en el ai-service (si falla, no interrumpe el borrado).
+    try:
+        httpx.delete(f"{AI_SERVICE_URL}/vectors/{record_id}", timeout=5.0)
+    except Exception:
+        pass

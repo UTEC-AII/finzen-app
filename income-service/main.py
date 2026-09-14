@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session
 import models
 import schemas
 from database import Base, engine, get_db
-from integrations import vectorize_record
+from integrations import delete_vector, vectorize_record
 from security import get_current_user_id
 
 # Crea las tablas al iniciar el servicio.
@@ -143,4 +143,6 @@ def delete_income(
         raise HTTPException(status_code=403, detail="No autorizado para este ingreso")
     db.delete(income)
     db.commit()
+    # Elimina también su vector en el ai-service.
+    delete_vector(income_id)
     return None

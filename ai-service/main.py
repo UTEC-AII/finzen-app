@@ -313,6 +313,22 @@ def vectorize(
     return schemas.VectorizeResponse(status="vectorized", id=record.id)
 
 
+@app.delete("/vectors/{vector_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_vector(vector_id: str, db: Session = Depends(get_db)):
+    # Endpoint interno: lo llama income/expense al eliminar un movimiento.
+    record = (
+        db.query(models.VectorizedTransaction)
+        .filter(models.VectorizedTransaction.id == vector_id)
+        .first()
+    )
+    if record:
+        db.delete(record)
+        db.commit()
+        db.execute(text(f"DELETE FROM {FTS_TABLE} WHERE id = :id"), {"id": vector_id})
+        db.commit()
+    return None
+
+
 @app.post("/reindex", response_model=schemas.ReindexResponse)
 def reindex(
     current_user_id: str = Depends(get_current_user_id),
