@@ -20,7 +20,6 @@ from ai_client import (
     NO_INFO_ANSWER,
     current_model_name,
     embed_many_with_model,
-    embed_text,
     embed_with_model,
     extract_filters,
     generate_answer,
@@ -349,6 +348,22 @@ def query(
     # Clave efectiva: encabezado (si viene) o la guardada en SQLite.
     api_key = x_openai_key or stored_openai_key(db)
 
+    # Vectoriza la pregunta y obtiene el modelo realmente usado.
+    question_vector, model_used = embed_with_model(payload.question, api_key=api_key)
+
+    # Re-indexado automático: si algún movimiento quedó con otro modelo (p. ej. local),
+    # se regenera su vector aquí mismo, sin que el usuario haga nada.
+    outdated = [record for record in records if (record.embedding_model or "") != model_used]
+    if outdated:
+        vectors, _ = embed_many_with_model([record.text for record in outdated], api_key=api_key)
+        for record, vector in zip(outdated, vectors):
+            record.embedding = json.dumps(vector)
+            record.embedding_model = model_used
+        db.commit()
+        for record in outdated:
+            upsert_fts(db, record)
+        db.commit()
+
     # Pre-filtrado por metadata (categoría, tipo y rango de fechas) antes de buscar.
     categories = sorted({record.category for record in records if record.category})
     record_types = sorted({record.record_type for record in records if record.record_type})
@@ -370,7 +385,6 @@ def query(
     candidate_ids = {record.id for record in candidates}
 
     # Búsqueda híbrida: vectorial (semántica) + palabras clave (FTS5), fusionadas con RRF.
-    question_vector = embed_text(payload.question, api_key=api_key)
     vector_ids = vector_search(candidates, question_vector, CANDIDATES)
     keyword_ids = [
         doc_id
