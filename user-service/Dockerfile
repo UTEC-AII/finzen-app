@@ -1,5 +1,5 @@
-# Imagen base oficial y liviana recomendada en clase.
-FROM python:3.12-slim
+# Imagen base oficial y liviana recomendada en clase (python:3-slim).
+FROM python:3-slim
 
 WORKDIR /app
 
