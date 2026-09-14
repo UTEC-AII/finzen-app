@@ -227,10 +227,15 @@ finzen-app/
 │   ├── start_local.sh   # levanta los 4 servicios sin Docker (desarrollo)
 │   ├── stop_local.sh
 │   └── evaluate_rag.py  # evalúa el recall del asistente
+├── postman/             # colección Postman + entornos + guía de evidencia
+├── CATALOGO_DE_APIS.md  # documentación de todos los endpoints
 ├── docker-compose.yml
 ├── .env.example
 └── README.md
 ```
+
+> **Documentación de APIs:** ver [`CATALOGO_DE_APIS.md`](CATALOGO_DE_APIS.md) y la
+> [colección de Postman](postman/README.md) para probar todos los endpoints.
 
 ## Catálogo de APIs
 
