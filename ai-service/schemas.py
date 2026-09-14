@@ -28,3 +28,12 @@ class QueryRequest(BaseModel):
 class QueryResponse(BaseModel):
     answer: str
     matched_records: int
+
+
+class OpenAIKeyInput(BaseModel):
+    apiKey: str = Field(..., min_length=20)
+
+
+class OpenAIKeyStatus(BaseModel):
+    configured: bool
+    masked: str | None = None

@@ -1,7 +1,15 @@
-# Modelo de la tabla de transacciones vectorizadas.
+# Modelos del microservicio de IA.
 from sqlalchemy import Column, Index, Numeric, String, Text
 
 from database import Base
+
+
+class Setting(Base):
+    # Tabla clave-valor para configuración (p. ej. la clave de OpenAI).
+    __tablename__ = "settings"
+
+    key = Column(String, primary_key=True)
+    value = Column(Text, nullable=False)
 
 
 class VectorizedTransaction(Base):

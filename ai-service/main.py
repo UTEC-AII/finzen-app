@@ -39,6 +39,24 @@ app.add_middleware(
 # Cantidad de movimientos más relevantes que se recuperan por cada consulta.
 TOP_K = 5
 
+# Clave usada en la tabla de configuración para guardar la clave de OpenAI.
+OPENAI_KEY_SETTING = "openai_api_key"
+
+
+def mask_key(value: str | None) -> str | None:
+    # Versión enmascarada para mostrar (nunca la clave completa).
+    if not value:
+        return None
+    if len(value) <= 8:
+        return "••••••"
+    return f"{value[:3]}••••••{value[-4:]}"
+
+
+def stored_openai_key(db: Session) -> str | None:
+    # Lee la clave guardada en SQLite (tabla settings).
+    setting = db.get(models.Setting, OPENAI_KEY_SETTING)
+    return setting.value if setting else None
+
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
@@ -86,6 +104,48 @@ def health_check():
     }
 
 
+@app.get("/settings/openai-key", response_model=schemas.OpenAIKeyStatus)
+def get_openai_key_status(
+    current_user_id: str = Depends(get_current_user_id),
+    db: Session = Depends(get_db),
+):
+    # Devuelve si hay clave configurada y su versión enmascarada.
+    value = stored_openai_key(db)
+    return schemas.OpenAIKeyStatus(configured=bool(value), masked=mask_key(value))
+
+
+@app.put("/settings/openai-key", response_model=schemas.OpenAIKeyStatus)
+def set_openai_key(
+    payload: schemas.OpenAIKeyInput,
+    current_user_id: str = Depends(get_current_user_id),
+    db: Session = Depends(get_db),
+):
+    # Guarda (o actualiza) la clave de OpenAI en la base SQLite.
+    key = payload.apiKey.strip()
+    if not key.startswith("sk-"):
+        raise HTTPException(status_code=400, detail="La clave debe empezar con 'sk-'")
+    setting = db.get(models.Setting, OPENAI_KEY_SETTING)
+    if setting:
+        setting.value = key
+    else:
+        db.add(models.Setting(key=OPENAI_KEY_SETTING, value=key))
+    db.commit()
+    return schemas.OpenAIKeyStatus(configured=True, masked=mask_key(key))
+
+
+@app.delete("/settings/openai-key", response_model=schemas.OpenAIKeyStatus)
+def delete_openai_key(
+    current_user_id: str = Depends(get_current_user_id),
+    db: Session = Depends(get_db),
+):
+    # Elimina la clave guardada.
+    setting = db.get(models.Setting, OPENAI_KEY_SETTING)
+    if setting:
+        db.delete(setting)
+        db.commit()
+    return schemas.OpenAIKeyStatus(configured=False, masked=None)
+
+
 @app.post("/vectorize", response_model=schemas.VectorizeResponse, status_code=status.HTTP_201_CREATED)
 def vectorize(
     payload: schemas.VectorizeRequest,
@@ -93,8 +153,9 @@ def vectorize(
     x_openai_key: str | None = Header(default=None, alias="X-OpenAI-Key"),
 ):
     # Endpoint interno: lo llaman income-service y expense-service al crear un movimiento.
+    # La clave se toma del encabezado (si viene) o de la guardada en SQLite.
     text = build_record_text(payload)
-    embedding = embed_text(text, api_key=x_openai_key)
+    embedding = embed_text(text, api_key=x_openai_key or stored_openai_key(db))
 
     existing = (
         db.query(models.VectorizedTransaction)
@@ -151,8 +212,11 @@ def query(
             matched_records=0,
         )
 
+    # Clave efectiva: encabezado (si viene) o la guardada en SQLite.
+    api_key = x_openai_key or stored_openai_key(db)
+
     # Vectoriza la pregunta y calcula la similitud coseno con cada movimiento.
-    question_vector = embed_text(payload.question, api_key=x_openai_key)
+    question_vector = embed_text(payload.question, api_key=api_key)
     scored = sorted(
         records,
         key=lambda record: cosine_similarity(question_vector, json.loads(record.embedding)),
@@ -161,5 +225,5 @@ def query(
     top_records = scored[:TOP_K]
 
     # Genera la respuesta final a partir de los movimientos más relevantes.
-    answer = generate_answer(payload.question, top_records, api_key=x_openai_key)
+    answer = generate_answer(payload.question, top_records, api_key=api_key)
     return schemas.QueryResponse(answer=answer, matched_records=len(top_records))
