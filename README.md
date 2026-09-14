@@ -119,6 +119,10 @@ Crea un `.env` a partir de `.env.example`:
 
 ## Despliegue en AWS (EC2)
 
+> **Arquitectura:** **una sola instancia EC2** con **IP elástica** (sin Application
+> Load Balancer ni Auto Scaling), dimensionada para ~10 usuarios. Nginx reparte
+> internamente a los contenedores.
+>
 > **Orden:** levanta primero este backend; el frontend se conecta a su red.
 >
 > **Conexión:** usamos **EC2 Instance Connect** (terminal en el navegador), así que
@@ -281,8 +285,10 @@ salvo el registro y el login.
 
 - **SQLite**: ideal para ~10 usuarios. Un solo escritor por archivo; si el proyecto
   crece a muchos usuarios concurrentes, migrar a **PostgreSQL/RDS**.
-- **Auto Scaling**: con varias instancias, cada una tendría su propio SQLite; para
-  producción real se necesita una base compartida.
+- **Escalado**: se despliega en **una sola instancia EC2** (con IP elástica). Si se
+  quisiera escalar horizontalmente (varias instancias), SQLite no bastaría —cada
+  instancia tendría su propia copia—; habría que migrar a PostgreSQL y añadir un
+  **load balancer**.
 - **ARM vs x86**: imágenes construidas en Mac no corren en EC2 x86 sin
   `--platform linux/amd64` (ver Despliegue en AWS).
 - **Puerto 80 ocupado**: si ya tienes algo escuchando en el 80, cambia el mapeo en
