@@ -111,8 +111,22 @@ def stored_openai_key(db: Session) -> str | None:
     return setting.value if setting else None
 
 
+def build_text_from_record(record: models.VectorizedTransaction) -> str:
+    # Construye la frase que se vectoriza a partir de un registro guardado.
+    label = "Ingreso" if record.record_type == "income" else "Gasto"
+    amount_text = f"{record.amount:.2f} {record.currency}".strip()
+    parts = [f"{label} de {amount_text}"]
+    if record.category:
+        parts.append(f"en {record.category}")
+    if record.date:
+        parts.append(f"el {record.date}")
+    if record.description:
+        parts.append(f"({record.description})")
+    return " ".join(parts)
+
+
 def build_record_text(payload: schemas.VectorizeRequest) -> str:
-    # Construye la frase que se vectoriza a partir del movimiento.
+    # Construye la frase que se vectoriza a partir del movimiento recibido.
     label = "Ingreso" if payload.record_type == "income" else "Gasto"
     amount_text = f"{payload.amount:.2f} {payload.currency}".strip()
     parts = [f"{label} de {amount_text}"]
@@ -317,6 +331,8 @@ def reindex(
     if not records:
         return schemas.ReindexResponse(reindexed=0, model=current_model_name(api_key))
 
+    for record in records:
+        record.text = build_text_from_record(record)
     vectors, model_used = embed_many_with_model(
         [record.text for record in records], api_key=api_key
     )
@@ -358,9 +374,14 @@ def query(
     # Vectoriza la pregunta y obtiene el modelo realmente usado.
     question_vector, model_used = embed_with_model(payload.question, api_key=api_key)
 
-    # Re-indexado automático: si algún movimiento quedó con otro modelo (p. ej. local),
-    # se regenera su vector aquí mismo, sin que el usuario haga nada.
-    outdated = [record for record in records if (record.embedding_model or "") != model_used]
+    # Re-indexado automático: si algún movimiento quedó con otro modelo (p. ej. local)
+    # o su texto está desactualizado (p. ej. sin moneda), se regenera aquí mismo.
+    outdated = []
+    for record in records:
+        expected_text = build_text_from_record(record)
+        if (record.embedding_model or "") != model_used or record.text != expected_text:
+            record.text = expected_text
+            outdated.append(record)
     if outdated:
         vectors, _ = embed_many_with_model([record.text for record in outdated], api_key=api_key)
         for record, vector in zip(outdated, vectors):
