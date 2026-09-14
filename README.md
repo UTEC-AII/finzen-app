@@ -290,9 +290,14 @@ salvo el registro y el login.
 
 ## Autores y licencia
 
-Proyecto desarrollado para el curso de **Cloud Computing** de la
+Proyecto desarrollado para el curso de **Cloud Computing (MCD8007)** de la
 **Maestría en Ciencia de Datos e Inteligencia Artificial (CDIA) — UTEC**.
+Docente: **Mejia Fernandez, Oscar Rodolfo**.
 
-- **Sebastian Garcia Villacorta** — [@sebastian-rgv](https://github.com/sebastian-rgv)
+**Grupo 2 — Integrantes:**
+- García Villacorta, Sebastian Rodrigo — [@sebastian-rgv](https://github.com/sebastian-rgv)
+- Barreto Daza, Dante Guillermo
+- Chulluncuy Reynoso, Clinton
+- Hilario Orihuela, Ronald Ramiro
 
 Licencia: [MIT](LICENSE).
