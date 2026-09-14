@@ -120,28 +120,32 @@ Crea un `.env` a partir de `.env.example`:
 ## Despliegue en AWS (EC2)
 
 > **Orden:** levanta primero este backend; el frontend se conecta a su red.
+>
+> **Conexión:** usamos **EC2 Instance Connect** (terminal en el navegador), así que
+> **no necesitas key pair ni `ssh -i`**.
 
 1. **Crear la instancia EC2**
    - Región: `us-east-1` (Norte de Virginia)
-   - AMI: Ubuntu 24.04 LTS · Tipo: `t3.micro`
-   - Asignar una **IP elástica** (para tener una IP pública fija)
+   - **AMI:** `cloud.22` (imagen pública de clase: Ubuntu con Python, Node.js, Git,
+     Docker y Apache preinstalados) — o **Ubuntu 24.04 LTS** si no está disponible
+   - Tipo: `t3.micro`
+   - **Key pair:** ninguno (usaremos Instance Connect)
+   - Asignar una **IP elástica** (IP pública fija)
 
 2. **Configurar el Security Group** (reglas de entrada)
-   - `22` (SSH) → tu IP
+   - `22` (SSH) → `0.0.0.0/0` *(necesario para EC2 Instance Connect)*
    - `80` (HTTP) → `0.0.0.0/0`
    - *(opcional)* `443` (HTTPS) → `0.0.0.0/0`
 
-3. **Conectarse por SSH**
+3. **Conectarse (sin SSH)**
+   - Consola **EC2** → selecciona la instancia → botón **Connect** →
+   - pestaña **EC2 Instance Connect** → **Connect**. Se abre una terminal en el navegador.
+
+4. **Instalar Docker (si la AMI no lo trae) y clonar el proyecto**
 
    ```bash
-   ssh -i "finzen-key.pem" ubuntu@<TU-IP-ELASTICA>
-   ```
-
-4. **Instalar Docker y clonar el proyecto**
-
-   ```bash
-   sudo apt update
-   sudo apt install -y git docker.io docker-compose-v2
+   # Con la AMI cloud.22 Docker ya viene instalado; en Ubuntu limpio ejecuta:
+   sudo apt update && sudo apt install -y git docker.io docker-compose-v2
    sudo usermod -aG docker $USER && newgrp docker
 
    git clone https://github.com/UTEC-AII/finzen-app.git
@@ -164,6 +168,10 @@ Crea un `.env` a partir de `.env.example`:
      -H "Content-Type: application/json" \
      -d '{"name":"Demo","email":"demo@test.com","password":"secreto123","preferred_currency":"PEN"}'
    ```
+
+> **¿Es necesaria la AMI `cloud.22`?** No es obligatoria: como todo corre en
+> **Docker**, cualquier Ubuntu sirve. `cloud.22` solo ahorra el paso de instalar
+> Docker/Python/Node. Si no la encuentras, usa Ubuntu 24.04 LTS y el paso 4.
 
 > **Importante (Mac Apple Silicon):** las imágenes construidas en un Mac son ARM.
 > Para EC2 (x86) construye con `docker buildx build --platform linux/amd64` **o**,
