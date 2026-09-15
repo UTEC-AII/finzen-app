@@ -24,7 +24,13 @@ Evidencia de uso de las APIs (Parte C del Proyecto Parcial).
 > El `token` y los ids se llenan solos con los *test scripts* de cada request.
 > Si ejecutas el login manualmente, cambia el correo por uno que ya exista.
 
-## Evidencia para la entrega (capturas)
+## Evidencia (capturas incluidas)
+
+La carpeta [`evidencia/`](evidencia/) contiene las capturas de las peticiones
+realizadas contra el backend en ejecución (registro, login, ingreso, gastos PEN/USD,
+listado con filtro, las 3 consultas al asistente y la re-indexación).
+
+## Evidencia para la entrega (checklist)
 
 Toma capturas donde se vea el **método, la URL, el body y la respuesta**:
 
