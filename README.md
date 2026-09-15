@@ -117,6 +117,11 @@ Crea un `.env` a partir de `.env.example`:
 > La clave de OpenAI también puede configurarse en tiempo de ejecución desde la
 > interfaz web (se guarda en SQLite, nunca en el navegador).
 
+**Costo de OpenAI (aparte de AWS):** se factura según el uso. Precios oficiales
+(https://platform.openai.com/docs/pricing, por 1M tokens): `text-embedding-3-large`
+$0.13, `gpt-4o-mini` $0.15 entrada / $0.60 salida. Al volumen del proyecto (~1 000
+movimientos + 200 consultas/mes) ronda **~$0.04/mes**, insignificante frente a AWS.
+
 ## Despliegue en AWS (EC2)
 
 > **Arquitectura:** **una sola instancia EC2** con **IP elástica** (sin Application
