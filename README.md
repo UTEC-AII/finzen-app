@@ -58,8 +58,8 @@ Cada microservicio corre en su propio contenedor y usa su **propia** base SQLite
 | `expense-service` | 8003 | `expenses.db` | Registro y consulta de gastos por categoría |
 | `ai-service` | 8004 | `vectors.db` | Embeddings y consultas en lenguaje natural (RAG) |
 
-> El esquema completo de las 4 bases está en **`schema.dbml`** (DBML, renderizable en
-> [dbdiagram.io](https://dbdiagram.io)); es la fuente del diagrama Entidad-Relación.
+> El esquema completo de las 4 bases (DBML) y su diagrama Entidad-Relación están en el
+> repositorio de documentación: [finzen-docs](https://github.com/UTEC-AII/finzen-docs).
 
 ## Prerrequisitos
 
@@ -257,15 +257,14 @@ finzen-app/
 │   ├── start_local.sh   # levanta los 4 servicios sin Docker (desarrollo)
 │   ├── stop_local.sh
 │   └── evaluate_rag.py  # evalúa el recall del asistente
-├── postman/             # colección Postman + entornos + guía de evidencia
-├── CATALOGO_DE_APIS.md  # documentación de todos los endpoints
 ├── docker-compose.yml
 ├── .env.example
 └── README.md
 ```
 
-> **Documentación de APIs:** ver [`CATALOGO_DE_APIS.md`](CATALOGO_DE_APIS.md) y la
-> [colección de Postman](postman/README.md) para probar todos los endpoints.
+> **Documentación y pruebas:** el catálogo de APIs, la colección de Postman y las
+> evidencias están en el repositorio
+> [finzen-docs](https://github.com/UTEC-AII/finzen-docs).
 
 ## Catálogo de APIs
 
