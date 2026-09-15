@@ -66,6 +66,17 @@ _FINANCIAL_HINTS = (
     "gané",
     "presupuest",
     "total",
+    "finanz",
+    "dinero",
+    "plata",
+    "deuda",
+    "saldo",
+    "costo",
+    "cuesta",
+    "patrimonio",
+    "ganancia",
+    "pérdida",
+    "perdida",
 )
 
 
@@ -252,6 +263,35 @@ def extract_filters(
                 filters.pop(key, None)
 
     return filters
+
+
+def is_financial_question(question: str) -> bool:
+    # Define el flujo de modelos: ¿es una pregunta sobre las finanzas del usuario?
+    text = question.lower()
+    return any(hint in text for hint in _FINANCIAL_HINTS)
+
+
+def chat_reply(question: str, api_key: str | None = None) -> str:
+    # Respuesta conversacional SIN retrieval (saludos, charla general).
+    client = _client_for(api_key)
+    if client is not None:
+        try:
+            system_prompt = (
+                "Eres FinZen, un asistente de finanzas personales cercano, natural y conversacional. "
+                "Responde en español, breve y directo. Si el usuario saluda o conversa, sé cordial y "
+                "ofrécele ayuda con sus finanzas (ingresos, gastos, categorías). No inventes datos ni montos."
+            )
+            response = client.chat.completions.create(
+                model=CHAT_MODEL,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": question},
+                ],
+            )
+            return response.choices[0].message.content
+        except Exception:
+            pass
+    return SMALLTALK_ANSWER
 
 
 def _local_fallback(question: str, records: list) -> str:

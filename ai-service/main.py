@@ -18,11 +18,13 @@ import models
 import schemas
 from ai_client import (
     NO_INFO_ANSWER,
+    chat_reply,
     current_model_name,
     embed_many_with_model,
     embed_with_model,
     extract_filters,
     generate_answer,
+    is_financial_question,
     is_openai_enabled,
 )
 from database import Base, engine, get_db
@@ -384,8 +386,14 @@ def query(
     # Clave efectiva: encabezado (si viene) o la guardada en SQLite.
     api_key = x_openai_key or stored_openai_key(db)
 
+    # Flujo de modelos: si NO es una pregunta financiera, responde el modelo de chat
+    # (sin embeddings ni retrieval). Si es financiera, sigue el pipeline RAG.
+    if not is_financial_question(payload.question):
+        answer = chat_reply(payload.question, api_key=api_key)
+        return schemas.QueryResponse(answer=answer, matched_records=0, sources=[])
+
     if not records:
-        # Sin movimientos: el asistente igual puede saludar o conversar.
+        # Pregunta financiera sin movimientos: el asistente lo indica con claridad.
         answer = generate_answer(payload.question, [], api_key=api_key)
         return schemas.QueryResponse(answer=answer, matched_records=0, sources=[])
 
