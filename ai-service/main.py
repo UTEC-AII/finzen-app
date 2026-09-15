@@ -381,11 +381,13 @@ def query(
         .filter(models.VectorizedTransaction.user_id == payload.user_id)
         .all()
     )
-    if not records:
-        return schemas.QueryResponse(answer=NO_INFO_ANSWER, matched_records=0, sources=[])
-
     # Clave efectiva: encabezado (si viene) o la guardada en SQLite.
     api_key = x_openai_key or stored_openai_key(db)
+
+    if not records:
+        # Sin movimientos: el asistente igual puede saludar o conversar.
+        answer = generate_answer(payload.question, [], api_key=api_key)
+        return schemas.QueryResponse(answer=answer, matched_records=0, sources=[])
 
     # Vectoriza la pregunta y obtiene el modelo realmente usado.
     question_vector, model_used = embed_with_model(payload.question, api_key=api_key)

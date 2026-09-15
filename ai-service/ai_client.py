@@ -254,34 +254,37 @@ def extract_filters(
     return filters
 
 
-def generate_answer(question: str, records: list, api_key: str | None = None) -> str:
-    # Saludos o conversación casual: respuesta cordial, sin volcar datos.
+def _local_fallback(question: str, records: list) -> str:
+    # Respuesta sin LLM (no hay clave o falló OpenAI): plantillas locales.
     if _is_smalltalk(question):
         return SMALLTALK_ANSWER
-
-    # Si no hay movimientos, se responde con claridad y sin inventar datos.
     if not records:
         return NO_INFO_ANSWER
+    return _build_local_answer(records, question)
 
-    # Con OpenAI, se redacta una respuesta en lenguaje natural usando los movimientos recuperados.
+
+def generate_answer(question: str, records: list, api_key: str | None = None) -> str:
+    # Con LLM disponible, el modelo responde todo (incluidos los saludos), de forma natural.
     client = _client_for(api_key)
     if client is not None:
         try:
-            context = "\n".join(f"- {record.text}" for record in records)
+            context = "\n".join(f"- {record.text}" for record in records) or (
+                "(el usuario todavía no tiene movimientos registrados)"
+            )
             system_prompt = (
-                "Eres FinZen, un asistente de finanzas personales claro, cercano y preciso. "
-                "Responde en español, de forma breve y directa, usando la información del CONTEXTO. "
-                "El CONTEXTO ya contiene los movimientos del usuario relevantes para la pregunta: "
-                "úsalos y respóndela con seguridad. Si el usuario pide un total, suma los movimientos "
-                "relevantes y muestra el resultado con su moneda. NUNCA sumes montos de monedas "
-                "distintas entre sí: si hay varias monedas, repórtalas por separado. "
-                "Si el usuario solo saluda o conversa casualmente (no pregunta sobre sus finanzas), "
-                "responde cordialmente en una frase y ofrécele ayuda, sin volcar montos. "
-                "Solo si el CONTEXTO no tiene ningún movimiento, responde exactamente: "
+                "Eres FinZen, un asistente de finanzas personales cercano, natural y conversacional. "
+                "Responde en español, de forma breve y directa. "
+                "Si el usuario saluda o conversa casualmente, respóndele de forma natural y cálida "
+                "(varía las palabras, no uses una frase fija) y ofrécele ayuda con sus finanzas, sin "
+                "volcar montos ni resúmenes. "
+                "Si pregunta por sus finanzas, usa la información del CONTEXTO; si pide un total, suma "
+                "los movimientos relevantes y muestra el resultado con su moneda. NUNCA sumes montos de "
+                "monedas distintas entre sí: repórtalas por separado. "
+                "Si el CONTEXTO no tiene movimientos y la pregunta es financiera, responde exactamente: "
                 f'"{NO_INFO_ANSWER}" '
                 "No inventes montos, fechas, categorías ni comercios."
             )
-            user_prompt = f"Movimientos del usuario (CONTEXTO):\n{context}\n\nPREGUNTA: {question}"
+            user_prompt = f"Movimientos del usuario (CONTEXTO):\n{context}\n\nMENSAJE DEL USUARIO: {question}"
             response = client.chat.completions.create(
                 model=CHAT_MODEL,
                 messages=[
@@ -291,9 +294,8 @@ def generate_answer(question: str, records: list, api_key: str | None = None) ->
             )
             return response.choices[0].message.content
         except Exception:
-            # Si OpenAI falla, se responde con el resumen local.
-            return _build_local_answer(records, question)
-    return _build_local_answer(records, question)
+            return _local_fallback(question, records)
+    return _local_fallback(question, records)
 
 
 def _summarize_by_currency(records: list) -> str:
