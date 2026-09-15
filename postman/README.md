@@ -17,18 +17,34 @@ Evidencia de uso de las APIs (Parte C del Proyecto Parcial).
 
 1. **`1. Autenticación → Registrar usuario`** → guarda `userId`.
 2. **`1. Autenticación → Login`** → guarda `token` automáticamente (lo usa toda la colección).
-3. **`4. Gastos → Registrar gasto`** y **`Registrar gasto (USD)`**.
-4. **`3. Ingresos → Registrar ingreso`**.
+3. **`3. Ingresos → Registrar ingreso`**.
+4. **`4. Gastos → Registrar gasto`** y **`Registrar gasto (USD)`**.
 5. **`5. Asistente IA →`** las 3 consultas + reindex.
+6. **`6. Limpieza (opcional) →`** elimina el ingreso y el gasto de prueba.
 
 > El `token` y los ids se llenan solos con los *test scripts* de cada request.
 > Si ejecutas el login manualmente, cambia el correo por uno que ya exista.
 
+## Ejecución automatizada con Newman (CLI de Postman)
+
+```bash
+npm install -g newman newman-reporter-htmlextra
+newman run postman/FinZen.postman_collection.json \
+  -e postman/FinZen-Local.postman_environment.json \
+  --delay-request 2500 \
+  --reporters cli,htmlextra \
+  --reporter-htmlextra-export newman-report.html
+```
+
+`--delay-request 2500` da tiempo a que los microservicios vectoricen los movimientos
+(tarea en segundo plano) antes de ejecutar las consultas al asistente.
+
 ## Evidencia (capturas incluidas)
 
 La carpeta [`evidencia/`](evidencia/) contiene las capturas de las peticiones
-realizadas contra el backend en ejecución (registro, login, ingreso, gastos PEN/USD,
-listado con filtro, las 3 consultas al asistente y la re-indexación).
+realizadas contra el backend en ejecución, **generadas a partir de un run real de
+Newman** (registro, login, ingreso, gastos PEN/USD, listado con filtro, las 3
+consultas al asistente y la re-indexación).
 
 ## Evidencia para la entrega (checklist)
 

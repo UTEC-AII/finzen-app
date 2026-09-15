@@ -6,15 +6,39 @@
   },
   "auth": {
     "type": "bearer",
-    "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token}}",
+        "type": "string"
+      }
+    ]
   },
   "variable": [
-    { "key": "baseUrl", "value": "http://localhost" },
-    { "key": "token", "value": "" },
-    { "key": "email", "value": "" },
-    { "key": "userId", "value": "" },
-    { "key": "incomeId", "value": "" },
-    { "key": "expenseId", "value": "" }
+    {
+      "key": "baseUrl",
+      "value": "http://localhost"
+    },
+    {
+      "key": "token",
+      "value": ""
+    },
+    {
+      "key": "email",
+      "value": ""
+    },
+    {
+      "key": "userId",
+      "value": ""
+    },
+    {
+      "key": "incomeId",
+      "value": ""
+    },
+    {
+      "key": "expenseId",
+      "value": ""
+    }
   ],
   "item": [
     {
@@ -47,8 +71,23 @@
           ],
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "url": { "raw": "{{baseUrl}}/api/users/users", "host": ["{{baseUrl}}"], "path": ["api", "users", "users"] },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/users",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "users"
+              ]
+            },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"name\": \"Demo\",\n  \"email\": \"{{email}}\",\n  \"password\": \"secreto123\",\n  \"preferred_currency\": \"PEN\",\n  \"timezone\": \"America/Lima\"\n}"
@@ -73,9 +112,28 @@
           ],
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "url": { "raw": "{{baseUrl}}/api/users/auth/login", "host": ["{{baseUrl}}"], "path": ["api", "users", "auth", "login"] },
-            "body": { "mode": "raw", "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"secreto123\"\n}" }
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"secreto123\"\n}"
+            }
           }
         }
       ]
@@ -88,15 +146,42 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": { "raw": "{{baseUrl}}/api/users/users/{{userId}}", "host": ["{{baseUrl}}"], "path": ["api", "users", "users", "{{userId}}"] }
+            "url": {
+              "raw": "{{baseUrl}}/api/users/users/{{userId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "users",
+                "{{userId}}"
+              ]
+            }
           }
         },
         {
           "name": "Actualizar perfil",
           "request": {
             "method": "PUT",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "url": { "raw": "{{baseUrl}}/api/users/users/{{userId}}", "host": ["{{baseUrl}}"], "path": ["api", "users", "users", "{{userId}}"] },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/users/{{userId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "users",
+                "users",
+                "{{userId}}"
+              ]
+            },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"name\": \"Demo Actualizado\",\n  \"preferred_currency\": \"USD\",\n  \"timezone\": \"America/Lima\",\n  \"monthly_savings_goal\": \"100.00\"\n}"
@@ -125,8 +210,23 @@
           ],
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "url": { "raw": "{{baseUrl}}/api/incomes/incomes", "host": ["{{baseUrl}}"], "path": ["api", "incomes", "incomes"] },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/incomes/incomes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "incomes",
+                "incomes"
+              ]
+            },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"user_id\": \"{{userId}}\",\n  \"type\": \"Sueldo\",\n  \"amount\": \"3500.50\",\n  \"currency\": \"PEN\",\n  \"date\": \"2026-09-01\",\n  \"description\": \"Sueldo de setiembre\"\n}"
@@ -138,7 +238,18 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": { "raw": "{{baseUrl}}/api/incomes/incomes/{{userId}}", "host": ["{{baseUrl}}"], "path": ["api", "incomes", "incomes", "{{userId}}"] }
+            "url": {
+              "raw": "{{baseUrl}}/api/incomes/incomes/{{userId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "incomes",
+                "incomes",
+                "{{userId}}"
+              ]
+            }
           }
         },
         {
@@ -146,15 +257,19 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": { "raw": "{{baseUrl}}/api/incomes/incomes/detail/{{incomeId}}", "host": ["{{baseUrl}}"], "path": ["api", "incomes", "incomes", "detail", "{{incomeId}}"] }
-          }
-        },
-        {
-          "name": "Eliminar ingreso",
-          "request": {
-            "method": "DELETE",
-            "header": [],
-            "url": { "raw": "{{baseUrl}}/api/incomes/incomes/{{incomeId}}", "host": ["{{baseUrl}}"], "path": ["api", "incomes", "incomes", "{{incomeId}}"] }
+            "url": {
+              "raw": "{{baseUrl}}/api/incomes/incomes/detail/{{incomeId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "incomes",
+                "incomes",
+                "detail",
+                "{{incomeId}}"
+              ]
+            }
           }
         }
       ]
@@ -179,8 +294,23 @@
           ],
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "url": { "raw": "{{baseUrl}}/api/expenses/expenses", "host": ["{{baseUrl}}"], "path": ["api", "expenses", "expenses"] },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/expenses/expenses",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "expenses",
+                "expenses"
+              ]
+            },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"user_id\": \"{{userId}}\",\n  \"category\": \"Alimentacion\",\n  \"amount\": \"450.50\",\n  \"currency\": \"PEN\",\n  \"date\": \"2026-09-05\",\n  \"description\": \"Supermercado\"\n}"
@@ -191,8 +321,23 @@
           "name": "Registrar gasto (USD)",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "url": { "raw": "{{baseUrl}}/api/expenses/expenses", "host": ["{{baseUrl}}"], "path": ["api", "expenses", "expenses"] },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/expenses/expenses",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "expenses",
+                "expenses"
+              ]
+            },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"user_id\": \"{{userId}}\",\n  \"category\": \"Entretenimiento\",\n  \"amount\": \"20.00\",\n  \"currency\": \"USD\",\n  \"date\": \"2026-09-06\",\n  \"description\": \"Netflix\"\n}"
@@ -206,9 +351,21 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/expenses/expenses/{{userId}}?category=Alimentacion",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "expenses", "expenses", "{{userId}}"],
-              "query": [{ "key": "category", "value": "Alimentacion" }]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "expenses",
+                "expenses",
+                "{{userId}}"
+              ],
+              "query": [
+                {
+                  "key": "category",
+                  "value": "Alimentacion"
+                }
+              ]
             }
           }
         },
@@ -217,7 +374,19 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": { "raw": "{{baseUrl}}/api/expenses/expenses/detail/{{expenseId}}", "host": ["{{baseUrl}}"], "path": ["api", "expenses", "expenses", "detail", "{{expenseId}}"] }
+            "url": {
+              "raw": "{{baseUrl}}/api/expenses/expenses/detail/{{expenseId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "expenses",
+                "expenses",
+                "detail",
+                "{{expenseId}}"
+              ]
+            }
           }
         },
         {
@@ -225,15 +394,19 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": { "raw": "{{baseUrl}}/api/expenses/expenses/categories/list", "host": ["{{baseUrl}}"], "path": ["api", "expenses", "expenses", "categories", "list"] }
-          }
-        },
-        {
-          "name": "Eliminar gasto",
-          "request": {
-            "method": "DELETE",
-            "header": [],
-            "url": { "raw": "{{baseUrl}}/api/expenses/expenses/{{expenseId}}", "host": ["{{baseUrl}}"], "path": ["api", "expenses", "expenses", "{{expenseId}}"] }
+            "url": {
+              "raw": "{{baseUrl}}/api/expenses/expenses/categories/list",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "expenses",
+                "expenses",
+                "categories",
+                "list"
+              ]
+            }
           }
         }
       ]
@@ -245,8 +418,23 @@
           "name": "Consulta 1: ¿en qué categoría gasto más?",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "url": { "raw": "{{baseUrl}}/api/ai/query", "host": ["{{baseUrl}}"], "path": ["api", "ai", "query"] },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/ai/query",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "ai",
+                "query"
+              ]
+            },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"user_id\": \"{{userId}}\",\n  \"question\": \"¿En qué categoría gasto más?\",\n  \"timezone\": \"America/Lima\"\n}"
@@ -257,8 +445,23 @@
           "name": "Consulta 2: ¿cuánto he gastado este mes?",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "url": { "raw": "{{baseUrl}}/api/ai/query", "host": ["{{baseUrl}}"], "path": ["api", "ai", "query"] },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/ai/query",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "ai",
+                "query"
+              ]
+            },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"user_id\": \"{{userId}}\",\n  \"question\": \"¿Cuánto he gastado este mes?\",\n  \"timezone\": \"America/Lima\"\n}"
@@ -269,8 +472,23 @@
           "name": "Consulta 3: ¿cuánto he recibido de ingresos?",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "url": { "raw": "{{baseUrl}}/api/ai/query", "host": ["{{baseUrl}}"], "path": ["api", "ai", "query"] },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/ai/query",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "ai",
+                "query"
+              ]
+            },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"user_id\": \"{{userId}}\",\n  \"question\": \"¿Cuánto he recibido de ingresos?\",\n  \"timezone\": \"America/Lima\"\n}"
@@ -282,7 +500,17 @@
           "request": {
             "method": "POST",
             "header": [],
-            "url": { "raw": "{{baseUrl}}/api/ai/reindex", "host": ["{{baseUrl}}"], "path": ["api", "ai", "reindex"] }
+            "url": {
+              "raw": "{{baseUrl}}/api/ai/reindex",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "ai",
+                "reindex"
+              ]
+            }
           }
         },
         {
@@ -290,7 +518,61 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": { "raw": "{{baseUrl}}/api/ai/settings/openai-key", "host": ["{{baseUrl}}"], "path": ["api", "ai", "settings", "openai-key"] }
+            "url": {
+              "raw": "{{baseUrl}}/api/ai/settings/openai-key",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "ai",
+                "settings",
+                "openai-key"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "6. Limpieza (opcional)",
+      "item": [
+        {
+          "name": "Eliminar ingreso",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/incomes/incomes/{{incomeId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "incomes",
+                "incomes",
+                "{{incomeId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Eliminar gasto",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/expenses/expenses/{{expenseId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "expenses",
+                "expenses",
+                "{{expenseId}}"
+              ]
+            }
           }
         }
       ]
