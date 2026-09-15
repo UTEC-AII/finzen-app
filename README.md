@@ -58,6 +58,9 @@ Cada microservicio corre en su propio contenedor y usa su **propia** base SQLite
 | `expense-service` | 8003 | `expenses.db` | Registro y consulta de gastos por categoría |
 | `ai-service` | 8004 | `vectors.db` | Embeddings y consultas en lenguaje natural (RAG) |
 
+> El esquema completo de las 4 bases está en **`schema.dbml`** (DBML, renderizable en
+> [dbdiagram.io](https://dbdiagram.io)); es la fuente del diagrama Entidad-Relación.
+
 ## Prerrequisitos
 
 - **Git** ≥ 2.40

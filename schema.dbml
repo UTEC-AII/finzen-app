@@ -1,4 +1,4 @@
-// FinZen — Esquema de base de datos (DBML para dbdiagram.io)
+// FinZen - Esquema de base de datos (DBML para dbdiagram.io)
 // 4 microservicios, cada uno con su propia base SQLite.
 // Las referencias son "lógicas" (no hay FK física entre bases distintas).
 
@@ -11,7 +11,7 @@ Table users {
   timezone varchar [default: 'America/Lima']
   monthly_savings_goal numeric(12,2) [default: 0]
   created_at varchar [not null]
-  Note: 'user-service · users.db'
+  Note: 'user-service - users.db'
 }
 
 Table incomes {
@@ -23,7 +23,7 @@ Table incomes {
   date date [not null]
   description varchar
   created_at varchar [not null]
-  Note: 'income-service · incomes.db'
+  Note: 'income-service - incomes.db'
 
   indexes {
     (user_id, date) [name: 'idx_incomes_user_date']
@@ -40,7 +40,7 @@ Table expenses {
   date date [not null]
   description varchar
   created_at varchar [not null]
-  Note: 'expense-service · expenses.db'
+  Note: 'expense-service - expenses.db'
 
   indexes {
     (user_id, date) [name: 'idx_expenses_user_date']
@@ -61,7 +61,7 @@ Table vectorized_transactions {
   embedding text [not null]    // vector de 3072 dims (JSON)
   embedding_model varchar     // text-embedding-3-large | local-hash
   created_at varchar [not null]
-  Note: 'ai-service · vectors.db'
+  Note: 'ai-service - vectors.db'
 
   indexes {
     (user_id, record_type) [name: 'idx_vectors_user_type']
@@ -71,7 +71,7 @@ Table vectorized_transactions {
 Table settings {
   key varchar [pk]
   value text [not null]
-  Note: 'ai-service · vectors.db (clave de OpenAI, etc.)'
+  Note: 'ai-service - vectors.db (clave de OpenAI, etc.)'
 }
 
 // Relaciones lógicas (FK por user_id entre microservicios)
