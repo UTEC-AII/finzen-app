@@ -135,6 +135,15 @@ Crea un `.env` a partir de `.env.example`:
 > (usuarios → `:80`) y saliente (`docker pull`, `git clone`, API de OpenAI).
 > **No hace falta crear VPC, Internet Gateway ni NAT Gateway** (el NAT es solo para
 > subredes privadas y cuesta aparte).
+>
+> **Almacenamiento (EBS):** las bases SQLite viven en **volúmenes de Docker**, que se
+> guardan en el **volumen EBS** de la instancia (su disco). Por eso persisten al
+> reiniciar o redeployar. No se crea un EBS aparte: es el disco que ya trae la EC2.
+>
+> **Red interna de Docker:** Docker Compose crea automáticamente una red **bridge**
+> donde Nginx alcanza a los microservicios por **nombre de servicio**
+> (`user-service:8001`, `income-service:8002`, `expense-service:8003`,
+> `ai-service:8004`), nunca por `localhost`.
 
 1. **Crear la instancia EC2**
    - Región: `us-east-1` (Norte de Virginia)
