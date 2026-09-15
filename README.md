@@ -127,6 +127,14 @@ Crea un `.env` a partir de `.env.example`:
 >
 > **Conexión:** usamos **EC2 Instance Connect** (terminal en el navegador), así que
 > **no necesitas key pair ni `ssh -i`**.
+>
+> **Red (VPC / Internet Gateway):** usamos la **VPC por defecto**, que ya trae el
+> **Internet Gateway** (adjunto a la VPC) y una **Route Table** con la ruta
+> `0.0.0.0/0 → Internet Gateway`, sobre **subredes públicas**. Por eso, al lanzar la
+> EC2 con **IP elástica** en esa VPC ya tiene internet en ambos sentidos: entrante
+> (usuarios → `:80`) y saliente (`docker pull`, `git clone`, API de OpenAI).
+> **No hace falta crear VPC, Internet Gateway ni NAT Gateway** (el NAT es solo para
+> subredes privadas y cuesta aparte).
 
 1. **Crear la instancia EC2**
    - Región: `us-east-1` (Norte de Virginia)
@@ -136,10 +144,11 @@ Crea un `.env` a partir de `.env.example`:
    - **Key pair:** ninguno (usaremos Instance Connect)
    - Asignar una **IP elástica** (IP pública fija)
 
-2. **Configurar el Security Group** (reglas de entrada)
+2. **Configurar el Security Group** (firewall de la instancia, reglas de entrada)
    - `22` (SSH) → `0.0.0.0/0` *(necesario para EC2 Instance Connect)*
-   - `80` (HTTP) → `0.0.0.0/0`
+   - `80` (HTTP) → `0.0.0.0/0` *(por aquí entra todo: Nginx publica frontend + APIs)*
    - *(opcional)* `443` (HTTPS) → `0.0.0.0/0`
+   - **Salida:** All traffic → `0.0.0.0/0` (para Docker Hub, GitHub y OpenAI)
 
 3. **Conectarse (sin SSH)**
    - Consola **EC2** → selecciona la instancia → botón **Connect** →
