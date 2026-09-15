@@ -24,10 +24,7 @@ NO_INFO_ANSWER = (
 )
 
 # Respuesta cordial cuando el usuario solo saluda o conversa casualmente.
-SMALLTALK_ANSWER = (
-    "¡Hola! Soy FinZen, tu asistente financiero. Puedo ayudarte con tus ingresos, "
-    "gastos y categorías. ¿Qué te gustaría saber?"
-)
+SMALLTALK_ANSWER = "¿En qué puedo ayudarte con tus finanzas?"
 
 _GREETINGS = (
     "hola",
