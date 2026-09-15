@@ -130,7 +130,7 @@ Crea un `.env` a partir de `.env.example`:
 
 1. **Crear la instancia EC2**
    - Región: `us-east-1` (Norte de Virginia)
-   - **AMI:** `cloud.22` (imagen pública de clase: Ubuntu con Python, Node.js, Git,
+   - **AMI:** `Cloud9Ubuntu22` (imagen pública de clase: Ubuntu con Python, Node.js, Git,
      Docker y Apache preinstalados) — o **Ubuntu 24.04 LTS** si no está disponible
    - Tipo: `t3.micro`
    - **Key pair:** ninguno (usaremos Instance Connect)
@@ -148,7 +148,7 @@ Crea un `.env` a partir de `.env.example`:
 4. **Instalar Docker (si la AMI no lo trae) y clonar el proyecto**
 
    ```bash
-   # Con la AMI cloud.22 Docker ya viene instalado; en Ubuntu limpio ejecuta:
+   # Con la AMI Cloud9Ubuntu22 (Ubuntu 22.04) Docker ya viene instalado; en Ubuntu limpio ejecuta:
    sudo apt update && sudo apt install -y git docker.io docker-compose-v2
    sudo usermod -aG docker $USER && newgrp docker
 
@@ -173,13 +173,13 @@ Crea un `.env` a partir de `.env.example`:
      -d '{"name":"Demo","email":"demo@test.com","password":"secreto123","preferred_currency":"PEN"}'
    ```
 
-> **¿Es necesaria la AMI `cloud.22`?** No es obligatoria: como todo corre en
-> **Docker**, cualquier Ubuntu sirve. `cloud.22` solo ahorra el paso de instalar
+> **¿Es necesaria la AMI `Cloud9Ubuntu22`?** No es obligatoria: como todo corre en
+> **Docker**, cualquier Ubuntu sirve. `Cloud9Ubuntu22` solo ahorra el paso de instalar
 > Docker/Python/Node. Si no la encuentras, usa Ubuntu 24.04 LTS y el paso 4.
 
-### Alternativa: Ubuntu desde cero (sin la AMI `cloud.22`)
+### Alternativa: Ubuntu desde cero (sin la AMI `Cloud9Ubuntu22`)
 
-Si `cloud.22` no aparece en tu consola, crea la instancia con una AMI pública de
+Si `Cloud9Ubuntu22` no aparece en tu consola, crea la instancia con una AMI pública de
 Ubuntu y prepara el entorno tú mismo:
 
 1. **AMI:** busca **"Ubuntu Server 24.04 LTS (HVM), SSD Volume Type"**,
