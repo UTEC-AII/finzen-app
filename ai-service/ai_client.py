@@ -23,6 +23,61 @@ NO_INFO_ANSWER = (
     "No dispongo de suficiente información en tus registros para responder a esta pregunta."
 )
 
+# Respuesta cordial cuando el usuario solo saluda o conversa casualmente.
+SMALLTALK_ANSWER = (
+    "¡Hola! Soy FinZen, tu asistente financiero. Puedo ayudarte con tus ingresos, "
+    "gastos y categorías. ¿Qué te gustaría saber?"
+)
+
+_GREETINGS = (
+    "hola",
+    "buenas",
+    "buenos dias",
+    "buenos días",
+    "buenas tardes",
+    "buenas noches",
+    "hey",
+    "hello",
+    "hi",
+    "que tal",
+    "qué tal",
+    "como estas",
+    "cómo estás",
+    "gracias",
+    "ok",
+    "genial",
+)
+
+_FINANCIAL_HINTS = (
+    "gast",
+    "ingres",
+    "sueldo",
+    "categor",
+    "balance",
+    "ahorr",
+    "cuanto",
+    "cuánto",
+    "movimient",
+    "pague",
+    "pagué",
+    "recib",
+    "gasto",
+    "gane",
+    "gané",
+    "presupuest",
+    "total",
+)
+
+
+def _is_smalltalk(question: str) -> bool:
+    # Detecta saludos o conversación casual (sin intención financiera).
+    text = question.lower().strip()
+    if not text:
+        return False
+    if any(hint in text for hint in _FINANCIAL_HINTS):
+        return False
+    return len(text) <= 30 and any(greeting in text for greeting in _GREETINGS)
+
 
 def _client_for(api_key: str | None) -> OpenAI | None:
     # Prioriza la clave recibida; si no hay, usa la de entorno.
@@ -200,6 +255,10 @@ def extract_filters(
 
 
 def generate_answer(question: str, records: list, api_key: str | None = None) -> str:
+    # Saludos o conversación casual: respuesta cordial, sin volcar datos.
+    if _is_smalltalk(question):
+        return SMALLTALK_ANSWER
+
     # Si no hay movimientos, se responde con claridad y sin inventar datos.
     if not records:
         return NO_INFO_ANSWER
@@ -216,6 +275,8 @@ def generate_answer(question: str, records: list, api_key: str | None = None) ->
                 "úsalos y respóndela con seguridad. Si el usuario pide un total, suma los movimientos "
                 "relevantes y muestra el resultado con su moneda. NUNCA sumes montos de monedas "
                 "distintas entre sí: si hay varias monedas, repórtalas por separado. "
+                "Si el usuario solo saluda o conversa casualmente (no pregunta sobre sus finanzas), "
+                "responde cordialmente en una frase y ofrécele ayuda, sin volcar montos. "
                 "Solo si el CONTEXTO no tiene ningún movimiento, responde exactamente: "
                 f'"{NO_INFO_ANSWER}" '
                 "No inventes montos, fechas, categorías ni comercios."
@@ -231,8 +292,8 @@ def generate_answer(question: str, records: list, api_key: str | None = None) ->
             return response.choices[0].message.content
         except Exception:
             # Si OpenAI falla, se responde con el resumen local.
-            return _build_local_answer(records)
-    return _build_local_answer(records)
+            return _build_local_answer(records, question)
+    return _build_local_answer(records, question)
 
 
 def _summarize_by_currency(records: list) -> str:
@@ -244,16 +305,25 @@ def _summarize_by_currency(records: list) -> str:
     return ", ".join(f"{amount:.2f} {currency}".strip() for currency, amount in totals.items())
 
 
-def _build_local_answer(records: list) -> str:
-    # Resume los movimientos recuperados, separando por moneda.
+def _build_local_answer(records: list, question: str = "") -> str:
+    # Resume los movimientos recuperados, separando por moneda y según la intención.
+    q = question.lower()
     expenses = [record for record in records if record.record_type == "expense"]
     incomes = [record for record in records if record.record_type == "income"]
 
+    wants_income = any(w in q for w in ["ingres", "sueldo", "recib", "gané", "gane", "freelance", "bono"])
+    wants_expense = any(w in q for w in ["gast", "pagué", "pague", "categor", "presupuest", "compré", "compre"])
+
     parts = []
-    if expenses:
-        parts.append(f"En los movimientos recuperados, tus gastos suman: {_summarize_by_currency(expenses)}.")
-    if incomes:
+    if wants_expense and expenses:
+        parts.append(f"Tus gastos suman: {_summarize_by_currency(expenses)}.")
+    elif wants_income and incomes:
         parts.append(f"Tus ingresos suman: {_summarize_by_currency(incomes)}.")
+    else:
+        if incomes:
+            parts.append(f"Ingresos: {_summarize_by_currency(incomes)}.")
+        if expenses:
+            parts.append(f"Gastos: {_summarize_by_currency(expenses)}.")
     if not parts:
         return NO_INFO_ANSWER
 
