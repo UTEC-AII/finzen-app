@@ -128,10 +128,10 @@ movimientos + 200 consultas/mes) ronda **~$0.04/mes**, insignificante frente a A
 ## Despliegue en AWS (EC2)
 
 > **Arquitectura:** **una sola instancia EC2** con **IP elástica** (sin Application
-> Load Balancer ni Auto Scaling), dimensionada para el volumen del proyecto. Nginx reparte
-> internamente a los contenedores.
+> Load Balancer ni Auto Scaling). **Nginx** es el único punto de entrada: sirve el
+> **frontend** en `/` y enruta las **APIs** en `/api/*` a los microservicios.
 >
-> **Orden:** levanta primero este backend; el frontend se conecta a su red.
+> **Orden:** levanta primero este backend; el frontend se conecta a su red de Docker.
 >
 > **Conexión:** usamos **EC2 Instance Connect** (terminal en el navegador), así que
 > **no necesitas key pair ni `ssh -i`**.
@@ -155,10 +155,11 @@ movimientos + 200 consultas/mes) ronda **~$0.04/mes**, insignificante frente a A
 
 1. **Crear la instancia EC2**
    - Región: `us-east-1` (Norte de Virginia)
-   - **AMI:** `Cloud9Ubuntu22` (imagen pública de clase: Ubuntu con Python, Node.js, Git,
-     Docker y Apache preinstalados) — o **Ubuntu 24.04 LTS** si no está disponible
+   - **AMI:** `Cloud9Ubuntu22` (imagen de clase: Ubuntu 22.04 con Python, Node.js, Git,
+     Docker y Apache preinstalados)
    - Tipo: `t3.micro`
-   - **Key pair:** ninguno (usaremos Instance Connect)
+   - **Key pair:** ninguno → elige **“Proceed without a key pair”** (usaremos Instance Connect)
+   - Almacenamiento: **20 GB, gp3**
    - Asignar una **IP elástica** (IP pública fija)
 
 2. **Configurar el Security Group** (firewall de la instancia, reglas de entrada)
@@ -171,76 +172,50 @@ movimientos + 200 consultas/mes) ronda **~$0.04/mes**, insignificante frente a A
    - Consola **EC2** → selecciona la instancia → botón **Connect** →
    - pestaña **EC2 Instance Connect** → **Connect**. Se abre una terminal en el navegador.
 
-4. **Instalar Docker (si la AMI no lo trae) y clonar el proyecto**
+4. **Liberar el puerto 80 (¡importante!)**
+   La AMI trae **Apache** ocupando el puerto 80, y **Nginx también usa el 80**. Detén y
+   deshabilita Apache o Nginx no arrancará:
 
    ```bash
-   # Con la AMI Cloud9Ubuntu22 (Ubuntu 22.04) Docker ya viene instalado; en Ubuntu limpio ejecuta:
-   sudo apt update && sudo apt install -y git docker.io docker-compose-v2
-   sudo usermod -aG docker $USER && newgrp docker
+   sudo systemctl stop apache2
+   sudo systemctl disable apache2
+   ```
 
+   > Si al levantar ves `failed to bind host port 0.0.0.0:80/tcp: address already in use`,
+   > es Apache. Verifícalo con `sudo ss -tlnp | grep :80`.
+
+5. **Clonar el proyecto y configurar variables**
+
+   ```bash
    git clone https://github.com/UTEC-AII/finzen-app.git
    cd finzen-app
    cp .env.example .env
-   nano .env          # coloca tus valores reales (SECRET_KEY, OPENAI_API_KEY, ...)
+   nano .env   # SECRET_KEY (openssl rand -hex 32) y ALLOWED_ORIGINS=http://<TU-IP-ELASTICA>
    ```
 
-5. **Levantar los contenedores**
+6. **Levantar los contenedores**
 
    ```bash
-   docker compose up --build -d
+   docker compose up -d --build
    docker compose ps
    ```
+   Deben quedar **5** contenedores: los 4 microservicios **+ `finzen-nginx`** (publicando `80:80`).
 
-6. **Probar**
-
-   ```bash
-   curl http://<TU-IP-ELASTICA>/api/users/users -X POST \
-     -H "Content-Type: application/json" \
-     -d '{"name":"Demo","email":"demo@test.com","password":"secreto123","preferred_currency":"PEN"}'
-   ```
-
-> **¿Es necesaria la AMI `Cloud9Ubuntu22`?** No es obligatoria: como todo corre en
-> **Docker**, cualquier Ubuntu sirve. `Cloud9Ubuntu22` solo ahorra el paso de instalar
-> Docker/Python/Node. Si no la encuentras, usa Ubuntu 24.04 LTS y el paso 4.
-
-### Alternativa: Ubuntu desde cero (sin la AMI `Cloud9Ubuntu22`)
-
-Si `Cloud9Ubuntu22` no aparece en tu consola, crea la instancia con una AMI pública de
-Ubuntu y prepara el entorno tú mismo:
-
-1. **AMI:** busca **"Ubuntu Server 24.04 LTS (HVM), SSD Volume Type"**,
-   arquitectura `64-bit (x86)`.
-2. Tipo `t3.micro`, **sin key pair**, con **IP elástica** (igual que arriba).
-3. Conéctate con **EC2 Instance Connect** (paso 3).
-4. **Instala Docker desde cero:**
+7. **Probar el backend**
 
    ```bash
-   sudo apt update
-   sudo apt install -y ca-certificates curl git
-
-   # Repositorio oficial de Docker
-   sudo install -m 0755 -d /etc/apt/keyrings
-   sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
-   sudo chmod a+r /etc/apt/keyrings/docker.asc
-   echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo $VERSION_CODENAME) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-   sudo apt update
-   sudo apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
-
-   # Permite usar Docker sin sudo
-   sudo usermod -aG docker $USER && newgrp docker
-
-   # Verifica
-   docker --version && docker compose version
+   curl -s http://localhost/api/ai/health
+   curl -s -o /dev/null -w "%{http_code}\n" http://localhost/api/expenses/expenses/categories/list
    ```
 
-   > Atajo (paquete de Ubuntu, puede ser una versión más antigua de Docker):
-   > `sudo apt install -y docker.io docker-compose-v2`.
+8. **Levantar el frontend** (en la misma instancia): sigue la guía del repositorio
+   [finzen-webui](https://github.com/UTEC-AII/finzen-webui#despliegue-en-aws-ec2).
 
-5. Continúa con el **paso 4 (clonar)** y el **paso 5 (levantar los contenedores)**.
+9. **Abrir la app:** `http://<TU-IP-ELASTICA>` (puerto 80, servido por Nginx).
 
 > **Importante (Mac Apple Silicon):** las imágenes construidas en un Mac son ARM.
 > Para EC2 (x86) construye con `docker buildx build --platform linux/amd64` **o**,
-> más simple, construye directamente dentro de la instancia (paso 5, que ya hace
+> más simple, construye directamente dentro de la instancia (paso 6, que ya hace
 > `--build`). No uses `latest` en las imágenes base.
 
 ## Estructura del proyecto
