@@ -114,7 +114,7 @@ Crea un `.env` a partir de `.env.example`:
 
 | Variable | Servicio | Descripción | Ejemplo |
 |---|---|---|---|
-| `SECRET_KEY` | todos | Secreto para firmar/verificar los JWT (debe ser el mismo) | `cambia-esto` |
+| `SECRET_KEY` | todos | Secreto para firmar/verificar los JWT (HS256); debe ser **el mismo** en los 4 servicios | salida de `openssl rand -hex 32` |
 | `ALLOWED_ORIGINS` | todos | Orígenes permitidos por CORS | `http://localhost:3000` |
 | `DB_PATH` | todos | Ruta del archivo SQLite | `/app/data/users.db` |
 | `AI_SERVICE_URL` | income/expense | URL interna del ai-service | `http://ai-service:8004` |
@@ -122,6 +122,18 @@ Crea un `.env` a partir de `.env.example`:
 
 > La clave de OpenAI también puede configurarse en tiempo de ejecución desde la
 > interfaz web (se guarda en SQLite, nunca en el navegador).
+
+> **`SECRET_KEY` (para qué sirve y cómo generarla):** se usa para **firmar** el JWT al
+> iniciar sesión y **verificarlo** en cada petición protegida (algoritmo `HS256`). Los 4
+> servicios comparten el mismo valor: `user-service` firma, y el resto verifica.
+> Si alguien la conoce podría **falsificar tokens** (suplantar usuarios), así que **no
+> dejes el valor de ejemplo** ni la subas al repositorio. Genérala con:
+>
+> ```bash
+> openssl rand -hex 32      # -> 64 caracteres hexadecimales (256 bits)
+> ```
+>
+> Al cambiarla, las sesiones activas se invalidan (los usuarios vuelven a iniciar sesión).
 
 **Costo de OpenAI (aparte de AWS):** se factura según el uso. Precios oficiales
 (https://platform.openai.com/docs/pricing, por 1M tokens): `text-embedding-3-large`
