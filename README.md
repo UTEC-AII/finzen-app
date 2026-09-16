@@ -291,8 +291,16 @@ salvo el registro y el login.
   **load balancer**.
 - **ARM vs x86**: imágenes construidas en Mac no corren en EC2 x86 sin
   `--platform linux/amd64` (ver Despliegue en AWS).
-- **Puerto 80 ocupado**: si ya tienes algo escuchando en el 80, cambia el mapeo en
-  `docker-compose.yml` (servicio `nginx`).
+- **Puerto 80 ocupado (Apache)**: la AMI `Cloud9Ubuntu22` trae **Apache** en el puerto
+  80, y Nginx también lo usa. Si al levantar ves `failed to bind host port 0.0.0.0:80/tcp:
+  address already in use`, detén Apache:
+  `sudo systemctl stop apache2 && sudo systemctl disable apache2` (ver Despliegue en AWS, paso 4).
+- **Nginx no arranca** (`host not found in upstream "user-service"`): Nginx resuelve los
+  nombres de los microservicios con el **resolver de Docker**; si aun así ocurre, recréalo:
+  `docker compose up -d --force-recreate nginx`.
+- **Tras reiniciar la instancia EC2**: los contenedores **no arrancan solos**. Vuelve a
+  levantarlos: `cd finzen-app && docker compose up -d` y, si usas el frontend,
+  `docker start finzen-webui`.
 
 ## Autores y licencia
 
