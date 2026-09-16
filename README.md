@@ -10,8 +10,8 @@
 > **Nota de arquitectura:** este repositorio contiene el **backend** de FinZen.
 > El cliente web (Next.js) vive en **[finzen-webui](https://github.com/UTEC-AII/finzen-webui)**.
 
-**FinZen** es una app de finanzas personales con un asistente de IA que responde
-preguntas en lenguaje natural sobre tus propias transacciones. El backend está
+**FinZen** es una aplicación de finanzas personales con un asistente de IA que responde
+preguntas en lenguaje natural sobre las transacciones del propio usuario. El backend está
 compuesto por **4 microservicios FastAPI**, cada uno con **su propia base de datos
 SQLite**, empaquetados con **Docker** (imagen base `python:3-slim`) y publicados
 detrás de un **Nginx** reverse proxy.
@@ -135,10 +135,12 @@ Crea un `.env` a partir de `.env.example`:
 >
 > Al cambiarla, las sesiones activas se invalidan (los usuarios vuelven a iniciar sesión).
 
-**Costo de OpenAI (aparte de AWS):** se factura según el uso. Precios oficiales
-(https://platform.openai.com/docs/pricing, por 1M tokens): `text-embedding-3-large`
-$0.13, `gpt-4o-mini` $0.15 entrada / $0.60 salida. Al volumen del proyecto (~1 000
-movimientos + 200 consultas/mes) ronda **~$0.04/mes**, insignificante frente a AWS.
+**Costo de la API de OpenAI (independiente de AWS):** se factura según el consumo.
+Precios oficiales ([platform.openai.com/docs/pricing](https://platform.openai.com/docs/pricing),
+por 1 millón de tokens): `text-embedding-3-large` $0.13 y `gpt-4o-mini` $0.15 de entrada
+/ $0.60 de salida. Para el volumen estimado del proyecto (1 000 movimientos vectorizados
+y 200 consultas mensuales), el costo asciende a **aproximadamente $0.04 al mes**, un
+valor marginal en relación con el costo de AWS.
 
 ## Despliegue en AWS (EC2)
 
@@ -187,7 +189,7 @@ movimientos + 200 consultas/mes) ronda **~$0.04/mes**, insignificante frente a A
    - Consola **EC2** → selecciona la instancia → botón **Connect** →
    - pestaña **EC2 Instance Connect** → **Connect**. Se abre una terminal en el navegador.
 
-4. **Liberar el puerto 80 (¡importante!)**
+4. **Liberar el puerto 80 (paso obligatorio)**
    La AMI trae **Apache** ocupando el puerto 80, y **Nginx también usa el 80**. Detén y
    deshabilita Apache o Nginx no arrancará:
 
