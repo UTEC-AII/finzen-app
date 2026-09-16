@@ -84,6 +84,9 @@ docker compose up --build -d
 docker compose ps
 ```
 
+> `docker compose ps` lista los contenedores de **este** proyecto; `docker ps` lista
+> **todos** los que están corriendo (incluido el frontend `finzen-webui` si lo levantaste).
+
 Con esto, la API queda publicada a través de Nginx en `http://localhost`:
 
 ```bash
