@@ -123,7 +123,8 @@ def _embed_batch(
         try:
             response = client.embeddings.create(model=EMBEDDING_MODEL, input=texts)
             return [item.embedding for item in response.data], EMBEDDING_MODEL
-        except Exception:
+        except Exception as exc:
+            print(f"[ai-client] EMBEDDINGS ERROR: {type(exc).__name__}: {exc}", flush=True)
             pass
     return [_local_embedding(text) for text in texts], LOCAL_MODEL_NAME
 
@@ -286,7 +287,8 @@ def chat_reply(question: str, api_key: str | None = None) -> str:
                 ],
             )
             return response.choices[0].message.content
-        except Exception:
+        except Exception as exc:
+            print(f"[ai-client] CHAT ERROR: {type(exc).__name__}: {exc}", flush=True)
             pass
     return SMALLTALK_ANSWER
 
@@ -330,7 +332,8 @@ def generate_answer(question: str, records: list, api_key: str | None = None) ->
                 ],
             )
             return response.choices[0].message.content
-        except Exception:
+        except Exception as exc:
+            print(f"[ai-client] GENERATE ERROR: {type(exc).__name__}: {exc}", flush=True)
             return _local_fallback(question, records)
     return _local_fallback(question, records)
 
